@@ -1,24 +1,24 @@
 from flask import Flask, jsonify, request
 from flask_restful import Resource, Api
-from flask_mysqldb import MySQL
-from flask_cors import CORS # Consume Api for allow us to fetch / consume Api
+from flask_mysqldb import MySQL 
+from flask_cors import CORS
 import json
-import datetime
 
-# Create object of flask
 app = Flask(__name__)
 CORS(app)
+
+
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = 'r@@tmink'
+app.config['MYSQL_DB'] = 'test' 
 
 mysql = MySQL(app)
 
 api = Api(app)
 
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'r@@tmink'
-app.config['MYSQL_DB'] = 'test'
 
-# Convert data form MySQL to Python
+
 def dictfetchall(cursor):
     columns = [col[0] for col in cursor.description]
     return [
@@ -26,7 +26,7 @@ def dictfetchall(cursor):
         for row in cursor.fetchall()
     ]
 
-# Create api for students
+
 class Student(Resource):
     def get(self):
         cur = mysql.connection.cursor()
@@ -34,43 +34,54 @@ class Student(Resource):
         data = dictfetchall(cur)
         cur.close()
         print(type(data))
-        
+
         return jsonify({'students':data,'Method':'GET'})
-    
+
+
     def post(self):
-        return jsonify({'Method':'POST'})
-    
+        data = request.get_json()
+        print(data)
+        name = data['name']
+        email = data['email']
+        course = data['course']
+        gender = data['gender']
+
+        cur = mysql.connection.cursor()
+        cur.execute("INSERT INTO students (name,course,email,gender) VALUES(%s, %s, %s, %s)", (name,course,email,gender))
+
+        return jsonify({'Method':'POST', 'message':'New student created successfully'})
+
+
     def put(self):
-        return jsonify({'Method':'PUT'})
-    
+        data = request.get_json()
+        print(data)
+        id = data['id']
+        name = data['name']
+        email = data['email']
+        course = data['course']
+        gender = data['gender']
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+        UPDATE students SET name=%s, course=%s, email=%s, gender=%s
+        WHERE id=%s 
+        """, (name,course,email,gender,id))
+
+        return jsonify({'Method':'PUT', 'message':'Student updated successfully'})
+
     def patch(self):
-        return jsonify({'Method':'PATCH'})
-    
+        data = request.get_json()
+        print(data)
+        id = data['id']
+        cur = mysql.connection.cursor()
+        cur.execute("DELETE FROM students WHERE id=%s", (id,))
+        mysql.connection.commit()
+
+
+        return jsonify({'Method':'PATCH', 'message':'Student daeleted successfully'})            
+
+
 api.add_resource(Student, '/api/students/')
 
-# app.config["SQLALCHEMY_DATABASE_URI"] = 'mysql://root:''@localhost/flask'
-# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# db = SQLAlchemy(app)
-
-# class Articles(db.Model):
-#     id = db.Column(db.Integer, primary_key = True)
-#     title = db.Column(db.String(100))
-#     body = db.Column(db.Text())
-#     date = db.Column(db.DateTime, default = datetime.datetime.now)
-
-#     def __init__(self, title, body):
-#         self.title = title
-#         self.body = body
-
-
-
-# # Create our route
-# @app.route('/get', methods = ['GET'])
-# def get_articles():
-#     return jsonify({"Hell0":"World"})
-
-
-# Run flask application
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
